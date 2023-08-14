@@ -47,8 +47,8 @@ if __name__ == '__main__':
             else:
                 # Extract the (optional) key and value, and print.
 
-                print("Consumed event from topic {topic}: user_name = {value}".format(
-                    topic=msg.topic(), value=msg.value() 
+                print("Consumed event from topic {topic} and user_name = {key}: {value}".format(
+                    topic=msg.topic(), key=msg.key(), value=msg.value() 
                 ))
     except KeyboardInterrupt:
         pass

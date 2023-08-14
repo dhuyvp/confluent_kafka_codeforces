@@ -13,12 +13,12 @@ class ClonecfItem(scrapy.Item):
     pass
 
 class UserInfoItem(scrapy.Item):
-    user_name = scrapy.Field()
-    current_rank = scrapy.Field()
+    user_name = scrapy.Field(required=False)
+    current_rank = scrapy.Field(required=False)
     comments = scrapy.Field()
     # current_rate = scrapy.Field()
     # max_rank = scrapy.Field()
     # max_rate = scrapy.Field()
-    # contribution = scrapy.Field()
+    # contribution = scrapy.Fierequired=Falseld()
     # num_of_friend = scrapy.Field()
-    contests = scrapy.Field()
+    contests = scrapy.Field(required=False)

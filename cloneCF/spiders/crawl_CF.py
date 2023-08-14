@@ -67,35 +67,53 @@ class CrawlCfSpider(scrapy.Spider):
         
         userInfo['user_name'] = response.xpath('//div[contains(@class, "{}")]'.format(' | '.join(class_list))).xpath("//h1/a/@href").get().split('/')[-1]
         userInfo['current_rank'] = response.xpath("//div[@class='user-rank']/span/text()").get()
-        userInfo['contests'] = ""
-        userInfo['comments'] = []
-        yield response.follow('https://codeforces.com/comments/with/tourist', callback=self.parse_comments, cb_kwargs={'userInfo':userInfo})
+        # userInfo['contests'] = ""
+        # userInfo['comments'] = []
+        user_comments_url = 'https://codeforces.com/comments/with/' + str(userInfo['user_name'])
+
+        yield response.follow(url=user_comments_url, callback=self.parse_comments, cb_kwargs={
+            "userInfo": userInfo,
+            })
 
         # parse_contests(self, userInfo, response)
         # contests_url = response.xpath("//div[@id='pageContent']/div/ul/li/a/@href")[-2].get()
 
-        # producer.produce(topic, userInfo, callback=delivery_callback)
+        
+        # yield userInfo
+
+    def parse_comments(self, response, **kwargs) :
+        userInfo = UserInfoItem()
+        userInfo['user_name'] = kwargs['userInfo']['user_name']
+        userInfo['current_rank'] = kwargs['userInfo']['current_rank']
+        userInfo['comments'] = []
+
+        comments_divs = response.xpath('//div[@class="content-with-sidebar"]').css('div[style="margin:3em 1em;"]') 
+
         producer = Producer({
             'bootstrap.servers': KAFKA_BROKERS,
             # 'client.id': 'my-producer',
         })
 
-        producer.produce(
-            topic="codeforces",
-            key=userInfo['user_name'],
-            value=userInfo['current_rank'],
-            # userInfo=userInfo,
-            callback=delivery_callback
-        )
+        for id in range(len(comments_divs) ) :
+            cmt = {
+                'link': "https://codeforces.com/"+ comments_divs[1].css('a::attr(href)').extract()[3],
+                'contest' : comments_divs[id].css('a::text').extract()[4],
+                'datetime': comments_divs[id].css('.format-humantime::text').get()
+            }
+            userInfo['comments'].append(cmt)
 
-        producer.flush()
+            str = f"{userInfo['user_name']} commented on {cmt['contest']} contest's blog about {cmt['datetime']}.\
+                    href: {cmt['link']}"
+            producer.produce(
+                topic="codeforces",
+                key=userInfo['user_name'],
+                value=str,
+                # userInfo=userInfo,
+                callback=delivery_callback
+            )
 
-        yield userInfo
+            producer.flush()
 
-    def parse_comments(self, response, userInfo) :
-        userInfo['comments'].append(1)
-
-        print('user name: ', userInfo['user_name'], '\n\n')
 
         yield userInfo
 
