@@ -4,6 +4,13 @@ import sys
 from argparse import ArgumentParser, FileType
 from configparser import ConfigParser
 from confluent_kafka import Consumer, OFFSET_BEGINNING
+from discord.ext import commands
+import time, datetime
+import discord
+import json
+
+MY_BOT_TOKEN_DISCORD = 'MTE0MDY2MzI1MTE3NzMxNjQwMg.GyPvZv.zAX5UthlzQP4gltdfamMTLOI4-PbNneDUV-iGk'
+MY_CHANNEL_ID_DISCORD = 1140805184033935553
 
 if __name__ == '__main__':
     # Parse the command line.
@@ -33,23 +40,42 @@ if __name__ == '__main__':
     topic = "codeforces"
     consumer.subscribe([topic], on_assign=reset_offset)
 
+    bot = commands.Bot(command_prefix='!', intents=discord.Intents.default())
     # Poll for new messages from Kafka and print them.
     try:
-        while True:
-            msg = consumer.poll(1.0)
-            if msg is None:
-                # Initial message consumption may take up to
-                # `session.timeout.ms` for the consumer group to
-                # rebalance and start consuming
-                print("Waiting...")
-            elif msg.error():
-                print("ERROR: %s".format(msg.error()))
-            else:
-                # Extract the (optional) key and value, and print.
+        @bot.event
+        async def on_ready():
+            print(f'Logged in as {bot.user.name}')
+            ###
+            channel = bot.get_channel(MY_CHANNEL_ID_DISCORD)
+            while True:
+                msg = consumer.poll(1.0)
+                if msg is None:
+                    # Initial message consumption may take up to
+                    # `session.timeout.ms` for the consumer group to
+                    # rebalance and start consuming
+                    print("Waiting...")
+                elif msg.error():
+                    print("ERROR: {}".format(msg.error()))
+                else:
+                    # Extract the (optional) key and value, and print.
 
-                print("Consumed event from topic {topic} and user_name = {key}: {value}".format(
-                    topic=msg.topic(), key=msg.key(), value=msg.value() 
-                ))
+                    print("Consumed event from topic {topic} and user_name = {key}: {value}".format(
+                        topic=msg.topic(), key=msg.key(), value=msg.value() 
+                    ))
+
+                    str_message = msg.value().decode('utf-8')
+                    print (str_message)
+                    if channel:
+                        # Send your message
+                        await channel.send(str_message)
+                        print('Message sent successfully!')
+                    else:
+                        print("Channel not found!")
+                            
+        # Run the bot
+        bot.run(MY_BOT_TOKEN_DISCORD)
+
     except KeyboardInterrupt:
         pass
     finally:

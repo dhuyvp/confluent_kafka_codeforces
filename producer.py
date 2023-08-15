@@ -6,6 +6,8 @@
 # from configparser import ConfigParser
 # from confluent_kafka import Producer
 import subprocess
+import time
+from datetime import datetime, timedelta
 
 # parser = ArgumentParser()
 # parser.add_argument('config_file', type=FileType('r'))
@@ -27,8 +29,9 @@ def crawl_codeforces():
 
 
 if __name__ == '__main__':
-    crawl_codeforces()
-
+    while True :
+      crawl_codeforces()
+      time.sleep(300)
     # Block until the messages are sent.
     # producer.poll(10000)
     # producer.flush()

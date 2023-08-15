@@ -4,15 +4,15 @@ from cloneCF.settings import KAFKA_BROKERS, KAFKA_TOPIC
 import scrapy
 from cloneCF.items import UserInfoItem
 from confluent_kafka import Producer
+from datetime import datetime, timedelta
 
 def delivery_callback(err, msg):
-        if err:
-            print('ERROR: Message failed delivery: {}'.format(err))
-        else:
-            print("Produced event to topic {topic}: user_name = {user_name}".format(
-                topic=msg.topic(), user_name=msg.value() )
-            )
-
+    if err:
+        print('ERROR: Message failed delivery: {}'.format(err))
+    else:
+        print("Produced event to topic {topic}: user_name = {user_name}".format(
+            topic=msg.topic(), user_name=msg.value() )
+        )
 
 class CrawlCfSpider(scrapy.Spider):
     name = "crawl_CF"
@@ -81,6 +81,18 @@ class CrawlCfSpider(scrapy.Spider):
         
         # yield userInfo
 
+    def check_time(self, target_date_str) :
+        target_date = datetime.strptime(target_date_str, "%b/%d/%Y %H:%M")
+
+        # Calculate current time minus 5 minutes
+        current_time = datetime.now()
+        five_minutes_ago = current_time - timedelta(hours=24)
+
+        # Compare the two datetime objects
+        if target_date > five_minutes_ago:
+            return True
+        return False
+
     def parse_comments(self, response, **kwargs) :
         userInfo = UserInfoItem()
         userInfo['user_name'] = kwargs['userInfo']['user_name']
@@ -96,24 +108,25 @@ class CrawlCfSpider(scrapy.Spider):
 
         for id in range(len(comments_divs) ) :
             cmt = {
-                'link': "https://codeforces.com/"+ comments_divs[1].css('a::attr(href)').extract()[3],
+                'link': "https://codeforces.com/"+ comments_divs[id].css('a::attr(href)').extract()[3],
                 'contest' : comments_divs[id].css('a::text').extract()[4],
-                'datetime': comments_divs[id].css('.format-humantime::text').get()
+                # 'datetime': comments_divs[id].css('.format-humantime::text').get()
+                'datetime': comments_divs[id].css('.format-humantime::attr(title)').get(),
             }
             userInfo['comments'].append(cmt)
 
-            str = f"{userInfo['user_name']} commented on {cmt['contest']} contest's blog about {cmt['datetime']}.\
-                    href: {cmt['link']}"
-            producer.produce(
-                topic="codeforces",
-                key=userInfo['user_name'],
-                value=str,
-                # userInfo=userInfo,
-                callback=delivery_callback
-            )
+            if self.check_time(cmt['datetime']) :
+                str_message = f"{userInfo['user_name']} commented on {cmt['contest']} contest's blog on {cmt['datetime']}. \nhref: {cmt['link']}"
+                
+                producer.produce(
+                    topic="codeforces",
+                    key=userInfo['user_name'],
+                    value=str_message,
+                    # userInfo=userInfo,
+                    callback=delivery_callback
+                )
 
-            producer.flush()
-
+                producer.flush()
 
         yield userInfo
 
