@@ -128,6 +128,9 @@ class CrawlCfSpider(scrapy.Spider):
 
                 producer.flush()
 
+            else :
+                break
+
         yield userInfo
 
     def parse_contests(self, response) :

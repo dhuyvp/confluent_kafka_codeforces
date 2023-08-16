@@ -7,12 +7,14 @@ from confluent_kafka import Consumer, OFFSET_BEGINNING
 from discord.ext import commands
 import time, datetime
 import discord
-import json
-
-MY_BOT_TOKEN_DISCORD = 'MTE0MDY2MzI1MTE3NzMxNjQwMg.GyPvZv.zAX5UthlzQP4gltdfamMTLOI4-PbNneDUV-iGk'
-MY_CHANNEL_ID_DISCORD = 1140805184033935553
+import os
+from dotenv import load_dotenv
 
 if __name__ == '__main__':
+    load_dotenv()
+    MY_BOT_TOKEN_DISCORD = str( os.getenv('MY_BOT_TOKEN_DISCORD') )
+    MY_CHANNEL_ID_DISCORD = int( os.getenv('MY_CHANNEL_ID_DISCORD') )
+
     # Parse the command line.
     parser = ArgumentParser()
     parser.add_argument('config_file', type=FileType('r'))
